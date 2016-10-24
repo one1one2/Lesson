@@ -1,0 +1,29 @@
+
+lc = 1e-2;
+
+Point(1) = {0, 0, 0, lc};
+Point(2) = {.1, 0, 0, lc};
+Point(3) = {.1, .1, 0, lc};
+Point(4) = {0 , .1, 0 ,lc};
+
+Line(1) = {1,2};
+Line(2) = {3,2};
+Line(3) = {3,4}; 
+Line(4) = {4,1};
+
+Line Loop(5) = {4,1,-2,3};
+
+Plane Surface(6) = {5};
+
+Physical Point(1) = {1,2} ;
+
+Extrude { {0,1,0} , {-0.1,0,0.1} , -Pi/2 } {
+Surface(6)
+ Recombine;
+}
+
+MY_LINE = 2;
+Physical Line(MY_LINE) = {1,2} ;
+Physical Line("My second line (automatic physical id)") = {3} ;
+Physical Line("My third line (physical id 5)", 5) = {4} ;
+Physical Surface("My surface") = {6} ;
