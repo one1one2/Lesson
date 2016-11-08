@@ -1,9 +1,17 @@
-
+/**
+ * @file Heat.h
+ * @brief 
+ * @author  lczheng, lczheng@pku.edu.cn 
+ * 
+ * @date 2016-11-08
+ */
 #ifndef __Heat_h__
 #define __Heat_h__
 
-#include "Vector.h"
+#include <iostream>
 #include <vector>
+#include "mpi.h"
+
 class Heat{
 private:
 //	enum Boundrary { DIRICHLET =1 , NEUMANN = 2};
@@ -27,7 +35,6 @@ private:
     void init();
 	void onestep();
 };
-
 
 
 #endif
