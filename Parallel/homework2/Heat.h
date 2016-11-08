@@ -10,31 +10,26 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
+#include <cstdlib>
 #include "mpi.h"
 
-class Heat{
-private:
-//	enum Boundrary { DIRICHLET =1 , NEUMANN = 2};
-	typedef double (*RHS)(double, double, double, double); 
-	typedef double (*RHF)(double, double, double);
-	typedef std::vector<double> Point;
-	RHS f,u,g;
-	RHF u0;
-    int N;
-	double h;
-	Vector<double> sol;
-public:
-	Heat(){};
-	void set_f(const RHS &fun);
-	void set_Initial(const RHF &fun);
-	void set_Boundrary(int flag , const RHS &fun);
-	void set_N(int N);
-	void solve(double t);
-private:
-	Point transform(int N);
-    void init();
-	void onestep();
-};
+typedef std::vector<std::vector<int> > INDEX;
+typedef std::vector<double> SOL;
+
+double u(double x, double y, double z, double t);
+double f(double x, double y, double z, double t);
+double u0(double x, double y, double z);
+int transform(int, int, int, int);
+void prepare();
+void init();
+void init(int rank, int size, int N, double h, int M, int &begin, int &end, int &length, int &recv_forward,
+			int &recv_backward, int &send_forward, int &send_backward, SOL &sol, INDEX &ind); 
+void onestep(double dt, double &t, int rank, int size, int N, double h, int M, int begin, int end, int length, int recv_forward,
+			int recv_backward, int send_forward, int send_backward, SOL &sol, INDEX ind, double t_end);  
+SOL solve(double CFL, double t_end, int rank, int size, int N);
+
+double error(SOL sol, int N, double t_end);
 
 
 #endif
