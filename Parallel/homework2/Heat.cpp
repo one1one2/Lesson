@@ -1,3 +1,11 @@
+/**
+ * @file Heat.cpp
+ * @brief 
+ * @author  lczheng, lczheng@pku.edu.cn 
+ * 
+ * @date 2016-11-08
+ */
+
 #include "Heat.h"
 
 void Heat::set_f(const RHS &fun){
