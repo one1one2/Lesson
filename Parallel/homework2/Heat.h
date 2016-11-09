@@ -14,22 +14,44 @@
 #include <cstdlib>
 #include "mpi.h"
 
-typedef std::vector<std::vector<int> > INDEX;
-typedef std::vector<double> SOL;
-
-double u(double x, double y, double z, double t);
-double f(double x, double y, double z, double t);
-double u0(double x, double y, double z);
-int transform(int, int, int, int);
-void prepare();
-void init();
-void init(int rank, int size, int N, double h, int M, int &begin, int &end, int &length, int &recv_forward,
-			int &recv_backward, int &send_forward, int &send_backward, SOL &sol, INDEX &ind); 
-void onestep(double dt, double &t, int rank, int size, int N, double h, int M, int begin, int end, int length, int recv_forward,
-			int recv_backward, int send_forward, int send_backward, SOL &sol, INDEX ind, double t_end);  
-SOL solve(double CFL, double t_end, int rank, int size, int N);
-
-double error(SOL sol, int N, double t_end);
+enum {DIRICHLET = 1, NEUMANN = 2};
+class Heat{
+private:
+	typedef double (*RHS)(double, double, double, double); 
+	typedef double (*RHF)(double, double, double);
+	typedef std::vector<std::vector<int> > INDEX;
+    typedef std::vector<double> SOL;
+	int begin, end, length, send_forward, send_backward;
+	int recv_forward, recv_backward;
+	
+	INDEX ind;
+	SOL sol;
+	RHS f, u, g_up, g_down;
+	RHF u0;
+    int N, M;
+	int size, rank;
+	double h, CFL, t_end, t;
+public:
+	Heat(){};
+	void set_size(int);
+	void set_rank(int);
+	void set_f(const RHS&);
+	void set_Initial(const RHF&);
+	void set_Boundrary(int, const RHS&);
+	void set_N(int);
+	void set_t(double);
+	void set_CFL(double);
+	// set the real solution, only for test
+	void set_Solution(const RHS&);
+	// calsulate the L2 norm error
+	double error();
+	std::vector<double> solve();
+private:
+	int transform(int, int, int);
+	void prepare();
+    void init();
+	void onestep(double);
+};
 
 
 #endif

@@ -1,0 +1,11 @@
+#! /bin/bash
+
+make && \
+mpirun -n 1 ./main 20 0.1 > 1_10.dat && \
+mpirun -n 2 ./main 20 0.1 > 2_10.dat && \
+mpirun -n 3 ./main 20 0.1 > 3_10.dat && \
+mpirun -n 4 ./main 20 0.1 > 4_10.dat && \
+mpirun -n 5 ./main 20 0.1 > 4_10.dat && \
+mpirun -n 6 ./main 20 0.1 > 4_10.dat && \
+mpirun -n 7 ./main 20 0.1 > 4_10.dat && \
+mpirun -n 8 ./main 20 0.1 > 4_10.dat 

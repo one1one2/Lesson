@@ -8,28 +8,66 @@
 
 #include "Heat.h"
 
-double u(double x, double y, double z, double t){
-	return t;
-}
-double f(double x, double y, double z, double t){
-	return 1;
-}
-double u0(double x, double y, double z){
-	return u(x,y,z,0);
+void Heat::set_size(int size1){
+	size = size1;
 }
 
-int transform(int i, int j, int k, int N){
+void Heat::set_rank(int rank1){
+	rank = rank1;
+}
+
+void Heat::set_f(const RHS &fun){
+	f = fun;
+}
+
+void Heat::set_Initial(const RHF &fun){
+	u0 = fun;
+}
+
+void Heat::set_Boundrary(int flag , const RHS &fun){
+	if (flag == DIRICHLET)
+		g_up = fun;
+	else if (flag == NEUMANN) 
+		g_down = fun;
+}
+
+void Heat::set_N(int N1){
+	N = N1; 
+	h = 1./(double)N;
+	M = (N + 1) * (N + 2) * (2 * N + 3) / 6;
+}
+
+void Heat::set_t(double t1){
+	t_end = t1;
+}
+
+void Heat::set_CFL(double CFL1){
+	CFL = CFL1;
+}
+
+void Heat::set_Solution(const RHS &uu){
+	u = uu;
+}
+
+/**
+ * @brief 利用坐标取得点的编号的一个帮助函数。
+ */
+int Heat::transform(int i, int j, int k){
 	if (i < 0 || j < 0 || i + j + k > N || i + j - k > N)
-	  return -1;
+		return -1;
 	if (k <= 0)
-	  return (N + k) * (N + k + 1) * (N + k + 2) / 6 
+		return (N + k) * (N + k + 1) * (N + k + 2) / 6 
 		  + j * (2 * N + 2 * k - j + 3) / 2 + i;  
 	return  (N + 1) * (N + 2) * (2 * N + 3) / 6 
-		-  (N - k + 1) * (N - k + 2) * (N - k + 3) / 6
-		+ j * (2 * N - 2 * k - j + 3) / 2 + i;  
+			-  (N - k + 1) * (N - k + 2) * (N - k + 3) / 6
+			+ j * (2 * N - 2 * k - j + 3) / 2 + i;  
 }
 
-void prepare(int rank, int size, int N, int M, INDEX &ind){
+/**
+ * @brief 由0号进程完成的一些初始化工作，包括给出所有编号的点的坐标，以及他们邻居的点
+ * 的编号，并将这些信息发送给所需要的进程。
+ */
+void Heat::prepare(){ 
 	ind.resize(9);
 	for (int i = 0; i < 9; i++)
 	  ind[i].resize(M);
@@ -37,16 +75,16 @@ void prepare(int rank, int size, int N, int M, INDEX &ind){
 	for (int i = 0; i <= N; i++)
 	  for (int j = 0; j <= N - i; j++)
 		for (int k = i + j - N; k <= N - i - j; k++){
-			int index = transform(i, j, k, N);
+			int index = transform(i, j, k);
 			ind[0][index] = i;    
 			ind[1][index] = j;    
 			ind[2][index] = k;
-			ind[3][index] = transform(i, j + 1, k, N);
-			ind[4][index] = transform(i, j - 1, k, N);
-			ind[5][index] = transform(i - 1, j, k, N);
-			ind[6][index] = transform(i + 1, j, k, N);
-			ind[7][index] = transform(i, j, k + 1, N);
-			ind[8][index] = transform(i, j, k - 1, N);
+			ind[3][index] = transform(i, j + 1, k);
+			ind[4][index] = transform(i, j - 1, k);
+			ind[5][index] = transform(i - 1, j, k);
+			ind[6][index] = transform(i + 1, j, k);
+			ind[7][index] = transform(i, j, k + 1);
+			ind[8][index] = transform(i, j, k - 1);
 		}
 	for (int i = 1; i < size; i++)
 	  for (int j = 0; j < 9; j++)
@@ -54,8 +92,11 @@ void prepare(int rank, int size, int N, int M, INDEX &ind){
 					MPI_INT, i, 0, MPI_COMM_WORLD);
 }
 
-void init(int rank, int size, int N, double h, int M, int &begin, int &end, int &length, int &recv_forward,
-			int &recv_backward, int &send_forward, int &send_backward, SOL &sol, INDEX &ind){ 
+/**
+ * @brief 每个进程单独的初始化工作，包括计算需要向相邻进程索取的信息，
+ * 和发送给相邻进程的信息，以及做t=0时刻解的初始化。
+ */
+void Heat::init(){ 
 	begin = (rank * M) / size; 
 	end = ((rank + 1) * M) / size;
 	length = end - begin;
@@ -72,8 +113,8 @@ void init(int rank, int size, int N, double h, int M, int &begin, int &end, int 
 		for (int index = 0; index < length; index++){
 			if (begin - ind[j][index] > recv_forward&& ind[j][index] != -1) 
 			  recv_forward = begin - ind[j][index];
-			if (ind[j][index] - end > recv_backward) 
-			  recv_backward = ind[j][index] - end;
+			if (ind[j][index] - end + 1 > recv_backward) 
+			  recv_backward = ind[j][index] - end + 1;
 		}
 
 	for (int j = 3; j < 9; j++)
@@ -97,50 +138,89 @@ void init(int rank, int size, int N, double h, int M, int &begin, int &end, int 
 		send_backward = 0;
 		recv_backward = 0;
 	}
-	for (int j = 3; j < 9; j++)
-		for (int index = 0; index < length; index++)
-			ind[j][index] -= begin + recv_forward;
-
 	if (rank == 0) 
-	  sol.resize(M);
+		sol.resize(M);
 	else 
-	  sol.resize(length);
+		sol.resize(length);
 	for (int index = 0; index < length; index++){
-		int i, j, k;
-		i = ind[0][index]; j = ind[1][index]; k = ind[2][index];
-		sol[index] = u0(i * h, j * h, k * h);
+		sol[index] = u0(ind[0][index] * h, ind[1][index] * h, ind[2][index] * h);
 	}
+	if (rank > 0)
+		MPI_Send(&sol[0], send_forward, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD);
+	if (rank < size - 1) 
+		MPI_Send(&sol[length - send_backward], send_backward, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
 }
 
-void onestep(double dt, double &t, int rank, int size, int N, double h, int M, int begin, int end, int length, int recv_forward,
-			int recv_backward, int send_forward, int send_backward, SOL &sol, INDEX ind, double t_end){	
+/**
+ * @brief 一步迭代
+ *
+ * @param dt 时间步长
+ */
+void Heat::onestep(double dt){
 	SOL temp;
 	temp.resize(recv_forward + length + recv_backward);
-	if (t > 0){
-		if (rank > 0)
-		 MPI_Recv(&temp[0], recv_forward, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		if (rank < size - 1) 
-		 MPI_Recv(&temp[recv_forward + length], recv_backward, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	}
+	if (rank > 0)
+		MPI_Recv(&temp[0], recv_forward, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	if (rank < size - 1) 
+		MPI_Recv(&temp[recv_forward + length], recv_backward, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 	for (int index = 0; index < length; index++)
 	  temp[recv_forward + index] = sol[index];
+
 	for (int index = 0; index < length; index++){
 		int i, j, k;
 		i = ind[0][index];
 		j = ind[1][index];
 		k = ind[2][index];
-		if (i + j + k == N) 
-			sol[index] = u(i * h, j * h, k * h, t);
-		else if (i == 0 || j == 0)
-			sol[index] = u(i * h, j * h, k * h, t);
-		else if (i + j - k == N) 
-			sol[index] = u(i * h, j * h, k * h, t);
-		else 
-			sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+		if (i + j + k == N){  //上边界——狄利克雷。 
+			sol[index] = u(i * h, j * h, k * h, t + dt); 
+		}else if (i + j - k != N){ // 下平面的点最后再处理。
+			if (i == 0 && j == 0){ //对称性处理x=y=0的情况。
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * (2 * temp[ind[3][index]] + 
+					+ 2 * temp[ind[6][index]] + temp[ind[7][index]] + temp[ind[8][index]] 
+					- 6 * temp[index + recv_forward]);
+			}else if (i == 0){ //处理x=0。
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * (temp[ind[3][index]] + temp[ind[4][index]] 
+					+ 2 * temp[ind[6][index]] + temp[ind[7][index]] + temp[ind[8][index]] 
+					- 6 * temp[index + recv_forward]);
+			}else if (j == 0){ //处理y=0。
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * (2 * temp[ind[3][index]] + temp[ind[5][index]] 
+					+   temp[ind[6][index]] + temp[ind[7][index]] + temp[ind[8][index]] 
+					- 6 * temp[index + recv_forward]);
+			}else { // 内部的点，采用一步显式差分格式
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
 					+ dt / h / h * (temp[ind[3][index]] + temp[ind[4][index]] + temp[ind[5][index]] 
 					+	temp[ind[6][index]] + temp[ind[7][index]] + temp[ind[8][index]] 
-					- 6 * temp[index + recv_forward]);	
+					- 6 * temp[index + recv_forward]);
+			}
+		}else {  //下边界——诺依曼
+			if (i != 0 && j != 0){
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * ( 2 * temp[ind[4][index]] + 2 * temp[ind[5][index]] 
+					+ 2 * temp[ind[7][index]] + 2 * sqrt(3.0) * h * g_down(i * h, j * h, k * h, t)  
+					- 6 * temp[index + recv_forward]); 
+			} 
+			if ( i == 0 && j != 0){
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * ( + 2 * temp[ind[4][index]] 
+					+ 2 * temp[ind[7][index]] + 2 * sqrt(3.0) * h * g_down(i * h, j * h, k * h, t)  
+					- 4 * temp[index + recv_forward]);
+			} 
+			if (i != 0 && j == 0){
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * ( 2 * temp[ind[5][index]] 
+					+ 2 * temp[ind[7][index]] + 2 * sqrt(3.0) * h * g_down(i * h, j * h, k * h, t)  
+					- 4 * temp[index + recv_forward]); 
+			} 
+			if (i == 0 && j == 0){
+				sol[index] = temp[index + recv_forward] + dt * f(i * h, j * h, k * h, t)
+					+ dt / h / h * ( 2 * temp[ind[7][index]] + 2 * sqrt(3.0) * h * g_down(i * h, j * h, k * h, t)  
+					- 2 * temp[index + recv_forward]); 
+			}
+		}
 	} 
 	t += dt;
     if (t < t_end){
@@ -151,47 +231,54 @@ void onestep(double dt, double &t, int rank, int size, int N, double h, int M, i
 	} 
 }
 
-std::vector<double> solve(double CFL, double t_end, int rank, int size, int N){
-	SOL sol;
-	double h = 1.0 / N;
-	int M = (N + 1) * (N + 2) * (2 * N + 3) / 6;
-    int begin, end, length, recv_forward, recv_backward, send_forward, send_backward;
-    INDEX ind;
+
+/**
+ * @brief 求解函数
+ *
+ * @return 0号进程返回整个解，其余进程返回各自负责的区域的解。
+ */
+std::vector<double> Heat::solve(){
 	if (rank == 0){
-		std::cout<<"Prepareing... form rank "<<rank <<std::endl;
-       prepare(rank, size, N, M, ind);
-		std::cout<<"Prepareing finished form rank "<<rank <<std::endl;
+		std::cerr<<"Prepareing... "<<std::endl;
+       prepare();
 	}
-	std::cout<<"Initializing... form rank "<<rank <<std::endl;
-	init(rank, size, N, h, M, begin, end, length, recv_forward,
-			recv_backward, send_forward, send_backward, sol, ind); 
-	std::cout<<"Initializing finished form rank "<<rank <<std::endl<<std::flush;
-	double t = 0;
+	init(); 	
 	double tau = CFL * h * h;
-    std::cerr<<"Calculating... from rank "<<rank<<std::endl;
-	do{
-		onestep(tau, t, rank, size, N, h, M, begin, end, length, recv_forward, recv_backward, send_forward, send_backward, sol, ind, t_end);
-	}while ( t + tau < t_end);
-	onestep(t_end - t, t, rank, size, N, h, M, begin, end, length, recv_forward, recv_backward, send_forward, send_backward, sol, ind, t_end);
-    std::cerr<<"Calculation finished from rank "<<rank<<std::endl;
-	if (rank != 0)
+	if (rank == 0){
+	  std::cerr<<"Calculating..."<<std::endl;
+	}
+	while (t + tau < t_end){
+		onestep(tau);
+	}
+	if (t < t_end){
+	  onestep(t_end - t);
+	}
+	if (rank != 0){
 	  MPI_Send(&sol[0], length, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-    if (rank == 0)
-		for (int i = 1; i < size - 1; i++){
+	}
+    if (rank == 0){
+		for (int i = 1; i < size; i++){
 			MPI_Recv(&sol[(i * M) / size], (int)(((i + 1) * M) / size) - (int)((i * M) / size), 
 					MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}
+	}
 	return sol;
 }
 
-
-double error(SOL sol, int N, double t_end){
-	double h = 1.0 / N;
+/**
+ * @brief 计算误差的一个测试函数
+ *
+ * @return L2误差 
+ */
+double Heat::error(){
 	double sum = 0;
 	for (int i = 0; i <= N; i++)
 		for (int j = 0; j <= N - i; j++)	
-			for (int k = i + j - N; k <= N - i - j ; k++)
-			  sum += (u(i*h,j*h,k*h,t_end) - sol[transform(i,j,k,N)]) * 
-				  (u(i*h,j*h,k*h,t_end) - sol[transform(i,j,k,N)]);
-	return std::sqrt(sum);
+			for (int k = i + j - N; k <= N - i - j ; k++){
+		//		if 	  (u(i*h,j*h,k*h,t_end) - sol[transform(i,j,k)]!=0)
+		//			std::cerr<<i<<j<<k<<N<<"  "<<transform(i,j,k)<<" "<<sol[transform(i,j,k)]<<"  "<<u(i*h,j*j,k*h,t_end)<<std::endl;
+			  sum += (u(i*h,j*h,k*h,t_end) - sol[transform(i,j,k)]) * 
+				  (u(i*h,j*h,k*h,t_end) - sol[transform(i,j,k)]);
+			}
+	return std::sqrt(sum/M);
 }  
