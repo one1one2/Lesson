@@ -1,0 +1,125 @@
+/**
+ * @file main.cpp
+ * @brief 
+ * @author  lczheng, lczheng@pku.edu.cn 
+ * 
+ * @date 2016-11-08
+ */
+
+#include<fstream>
+#include"Heat.h"
+
+double u(double x, double y, double z, double t){
+	return sin((x*x+y*y+z*z)*t);
+//    return (x*x+y*y+z*z)*exp(-t);
+}
+
+double f(double x, double y, double z, double t){
+	return cos((x*x+y*y+z*z)*t)*(x*x+y*y+z*z-6*t)
+		+sin((x*x+y*y+z*z)*t)*4*t*t*(x*x+y*y+z*z); 
+//    return (-6-(x*x+y*y+z*z))*exp(-t);
+}
+
+double u0(double x, double y, double z){
+	return u(x,y,z,0);
+}
+
+double g_up(double x, double y, double z, double t){
+	return u(x,y,z,t);
+}
+
+double g_down(double x, double y, double z, double t){
+	return cos((x*x+y*y+z*z)*t)*(2*t/sqrt(3.0));
+//    return 2*exp(-t)/sqrt(3.0);
+}
+
+int transform(int i, int j, int k,int N){
+	if (i < 0 || j < 0 || i + j + k > N || i + j - k > N)
+		return -1;
+	if (k <= 0)
+		return (N + k) * (N + k + 1) * (N + k + 2) / 6 
+		  + j * (2 * N + 2 * k - j + 3) / 2 + i;  
+	return  (N + 1) * (N + 2) * (2 * N + 3) / 6 
+			-  (N - k + 1) * (N - k + 2) * (N - k + 3) / 6
+			+ j * (2 * N - 2 * k - j + 3) / 2 + i;  
+}
+int main(int argc, char *argv[]){
+    int rank, size;
+	int N;
+	double CFL = 0.1;
+	double t_end;
+	double t1, t2;
+	std::vector<double> sol;
+//	std::string filename1, filename2, filename3;
+	MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	if (rank == 0){	
+		if (argc < 3){
+			std::cerr<<"Usage: mpirun -n <size> ./main <N> <t_end>"<<std::endl;
+			std::abort(); 
+			return 0;
+		}
+		t1 = MPI_Wtime();
+	}
+	N = atoi(argv[1]);
+	t_end = atof(argv[2]);
+//	filename1 = std::string(argv[3]);
+//	filename2 = std::string(argv[4]);
+//	filename3 = std::string(argv[5]);
+	Heat Qu;
+	Qu.set_size(size);
+	Qu.set_rank(rank);
+	Qu.set_f(f);
+	Qu.set_Initial(u0);
+	Qu.set_Boundrary(DIRICHLET, g_up);
+	Qu.set_Boundrary(NEUMANN, g_down);
+	Qu.set_CFL(CFL);
+	Qu.set_N(N);
+	Qu.set_t(t_end);
+	Qu.set_Solution(u);
+	sol = Qu.solve();
+    if (rank == 0){	
+		std::cerr<<"L2 error is "<<Qu.error()<<std::endl;
+		std::cerr<<"Finished!"<<std::endl;
+		t2 = MPI_Wtime();
+		std::cerr<<"clock time is "<<t2 -t1<<std::endl;
+/*
+		std::ofstream out1(filename1.c_str(),std::ios::out);
+		int k = N / 2;
+		for (int i = 0; i<= N; i++){
+		  for (int j = 0; j<= N; j++)
+			if (transform(i,j,k,N) >= 0) 
+			  out1<< sol[transform(i,j,k,N)]<<"  ";
+		  else out1<< -1 <<"  ";
+		  out1<<std::endl;
+		}
+		out1.close();
+
+		std::ofstream out2(filename2.c_str(),std::ios::out);
+		k = 0;
+		for (int i = 0; i<= N; i++){
+		  for (int j = 0; j<= N; j++)
+			if (transform(i,j,k,N) >= 0) 
+			  out2<< sol[transform(i,j,k,N)]<<"  ";
+		  else out2<<-1<<"  ";
+		  out2<<std::endl;
+		}
+		out2.close();
+
+		std::ofstream out3(filename3.c_str(),std::ios::out);
+		k = - N / 2;
+		for (int i = 0; i<= N; i++){
+		  for (int j = 0; j<= N; j++)
+			if (transform(i,j,k,N) >= 0) 
+			  out3<< sol[transform(i,j,k,N)]<<"  ";
+		  else out3<<-1<<"  ";
+		  out3<<std::endl;
+		}
+		out3.close();
+			*/
+	}
+	MPI_Finalize();
+	return 0;
+
+}

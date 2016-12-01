@@ -1,0 +1,11 @@
+#! /bin/bash
+
+make && \
+mpirun -n 9 ./main 40 1 && \  
+mpirun -n 10 ./main 40 1 && \  
+mpirun -n 11 ./main 40 1 && \  
+mpirun -n 12 ./main 40 1 && \  
+mpirun -n 13 ./main 40 1 && \  
+mpirun -n 14 ./main 40 1 && \  
+mpirun -n 15 ./main 40 1 && \  
+mpirun -n 16 ./main 40 1   

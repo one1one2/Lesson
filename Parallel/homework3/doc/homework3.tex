@@ -1,0 +1,206 @@
+\documentclass[a4paper,  11pt]{ctexart}
+\usepackage{srcltx,graphicx}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{color}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{psfrag}
+\usepackage{diagbox}
+\usepackage[hang]{subfigure}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=black,anchorcolor=blue,citecolor=green]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{comment}{Comment}
+\newtheorem{conjecture}{Conjecture}
+
+\newcommand\bbR{\mathbb{R}}
+\newcommand\bbN{\mathbb{N}}
+\newcommand\bbC{\mathbb{C}}
+\newcommand\bx{\boldsymbol{x}}
+\newcommand\dd{\,\mathrm{d}}
+
+\newcommand\diag{\mathrm{diag}}
+\newcommand\tr{\mthrm{tr}}
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{150mm}
+\setlength{\textheight}{230mm}
+
+\newcommand\note[2]{{{\bf #1}\color{red} [ {\it #2} ]}}
+%\newcommand\note[2]{{ #1 }} % using this line in the formal version
+
+\newcommand\pd[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand\od[2]{\dfrac{\dd {#1}}{\dd {#2}}}
+\newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
+
+\begin{document}
+\title{并行求解三维偏微分方程 \\ 并行计算第三次上机作业}
+\author{郑灵超}
+\maketitle
+\tableofcontents
+\newpage
+\section{问题介绍}
+本次要求解的方程是一个三维的偏微分方程，其定义域为立方体
+\[
+  |x|,|y|,|z|\leq \pi
+\]
+方程形式为
+\begin{equation}
+	\label{eq:PDEequation}
+	-\Delta u + u^3 = f ,
+\end{equation}
+所给的边界条件为周期边界。
+\section{算法介绍}
+
+此次我们采用的算法是显式差分格式，将求解区域按正方形网格剖分，即网格尺
+度$h=\frac 1 N$,则网格节点为
+$x=ih,y=jh,z=kh$
+其迭代格式为
+\begin{equation}
+	\begin{aligned}
+		\label{eq:iteration}
+	u^{(t+\Delta t)}(ih,jh,kh) =& u^{(t)}(ih,jh,kh) +\Delta t
+	f(ih,jh,kh,t) 
+	 +\frac{\Delta t}{h^2}[
+	u^{(t)}(ih+h,jh,kh)  \\  
+	& +u^{(t)}(ih-h,jh,kh) 
+ 	+u^{(t)}(ih,jh+h,kh)+u^{(t)}(ih,jh-h,kh) \\ 
+	& +u^{(t)}(ih,jh,kh+h)+u^{(t)}(ih,jh,kh-h) - 6 u^{(t)}(ih,jh,kh)
+	]
+\end{aligned}
+\end{equation}
+这部分数值格式的精度为$O(\tau+h^2)$，而CFL条件要求
+$$\frac{\tau}{h^2}\leq \frac{1}{6},$$
+因此这部分数值格式的精度为$O(h^2)$。
+
+在上边界，即狄利克雷边界上，我们直接进行赋值；在下边界，即诺依曼边界
+上，我们根据$t$时刻该点的法向导数，构造出一些虚设的外部的点的函数值，
+再利用\eqref{eq:iteration}进行迭代计算。例如在$x+y-z=1$的边界上，我们
+采取的格式是，
+\begin{equation}
+	\label{eq:neumann}
+	\begin{aligned}
+	u^{(t+\Delta t)}(ih,jh,kh) =& u^{(t)}(ih,jh,kh) +\Delta t
+	f(ih,jh,kh,t) 
+	 +\frac{\Delta t}{h^2}[
+	  2u^{(t)}(ih-h,jh,kh) \\
+ 	&+ 2u^{(t)}(ih,jh-h,kh)+2u^{(t)}(ih,jh,kh+h)-6 u^{(t)}(ih,jh,kh)\\
+	&+ 2\sqrt{3}g_{down}(ih,jh,kh,t)]
+	\end{aligned}
+\end{equation}
+\section{程序分析}
+\subsection{程序说明}
+我们定义了一个类Heat,用于求解这一类型的热方程，用户可以通过在main.cpp
+文件中修改方程的初边值条件和CFL条件数。网格密度$N$和计算终止时间
+$t_{end}$通过命令行参数读入。具体程序的结构和声明可以参见doc目录下的
+refman.pdf 和 html 目录下的index.html网页。以下我们简要说明一下并行实
+现的算法流程:
+\begin{enumerate}
+	\item 读入信息，如网格密度，计算终止时间，所用进程数目，CFL条件数
+		，和设置的初边值条件。
+	\item 由0号进程进行一些预处理工作：将三维的点用一个长度为$M$的
+		std::vector表示
+		，并给出将点转化为vector中下标的函数。并利用这个函数计算出
+		每个编号对应的点的
+		坐标和邻居的编号，并将这些信息发送给所需要的进程。
+	\item 每个进程各自的初始化工作，包括计算每个进程所包含的点的起始编
+		号和终止编号。我们这里将所有网格均等分给每个进程，第i号进程的
+		需要处理的网格编号为$\frac{iM}{size}$到$\frac{(i+1)M}{size}$。
+		此外，每个进程需要计算自己进行迭代计算时需要相邻进程提供的数据
+		。
+	\item 每个进程分别计算自己所管辖区域的$t=0$的初值情况。
+	\item 进行一步迭代计算。
+	\item 由0号进程收集终止时刻的所有值，合并成一个整体的向量，并返回
+		给用户。
+\end{enumerate}
+其中进行一步迭代计算的流程为，这里的一步迭代是每个进程分别操作的。
+\begin{enumerate}
+\item  向相邻进程收取所需要的前一时刻的数据，与自己前一时刻的数据组合
+	起一个完整的数据集合。
+\item 利用迭代格式\eqref{eq:iteration}和\eqref{eq:neumann}进行迭代计算。
+\item 将自己所被需要的信息发送给相邻的进程。
+\end{enumerate}
+\subsection{程序评价}
+\noindent
+这次我们采用的程序的优点有：
+\begin{itemize}
+	\item 将整个数据拉成一个一维连续的vector，并等分给各个进程，负载较
+		为均衡。
+	\item 精确计算了计算每个点所需要的信息，并向其它进程索取，保证了信
+		息传递没有浪费。
+	\item 用类进行封装，用户只需要通过主函数进行修改。
+\end{itemize}
+此外，我认为此次写的程序还有如下不足：
+\begin{itemize}
+	\item 一些基本信息的初始化工作仍然由0号进程完成，这儿我认为还有改
+		进空间。
+	\item 对于边界，我们尚未给出一个精细的处理方法。
+	\item 采用了显式求解格式，使得时间步长受到限制。
+\end{itemize}
+\section{数值结果}
+\subsection{误差分析}
+我们选取了一个有精确解的方程进行计算，其精确解为
+\begin{equation}
+	\label{eq:testfunction}
+	u(x,y,z,t)=\sin ((x^2+y^2+z^2)t)
+\end{equation}
+采取之前所介绍的方法进行计算，并将解与真实解做了误差比较，
+我们得到如下的结果:
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccccc}
+		\hline 
+		网格密度$N$ & L2误差 & 阶数 & CPU时间(s) & CPU时间的阶数 \\ 
+		\hline 
+		10  & 6.00e-3 & / & 0.0018 & /  \\
+		\hline 
+		20 & 1.40e-3 & 2.09 & 0.3278 & 7.5 \\
+		\hline 
+		40 & 3.31e-4 & 2.08 & 13.7198 & 5.39 \\
+		\hline 
+		80 & 8.06e-5 & 2.04 & 319.70 & 4.54\\ 
+		\hline
+	\end{tabular}
+\end{table}
+此处我们采用的CFL条件数为0.1,计算终止时间为1，进程数为4.
+\par
+虽然受到诺依曼边界条件的影响，我们的理论数值精度只有1阶，但实际计算的
+结果显示由2阶精度。
+\par
+由于我们固定CFL条件数为0.1，因此实际计算量为
+$O(\frac{N^3}{\tau})=O(N^5)$，与实际计算结果较为匹配。
+\subsection{并行效率分析}
+我们的测试函数仍然为\eqref{eq:testfunction},对不同的进程数，得到的计算
+结果如下：
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccccccccc}
+	\hline
+       进程数  & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
+	\hline
+	  CPU时间(s)&  50.8490 & 26.5723 & 17.8507 & 13.5908 & 14.0187 &
+	  11.8521 & 10.2867 & 9.5289\\
+	\hline 
+	 加速比 & / & 1.91 &  2.85 & 3.74 & 3.63 & 4.29 & 4.94 &  5.34 \\
+	\hline 
+	 效率 & / & 95.7\%  & 95.0\% &  93.5\% & 72.5\% &71.5\% & 70.6\% & 
+	 66.7\% \\
+	 \hline 
+ \end{tabular}
+\end{table}
+此处我们采用的CFL条件数为0.1，终止时间为1，网格密度$N=40$.
+\par
+通过这些数据，我们可以发现该程序的并行效率较高，但当核数多时效率会有所
+下降。经过比较，该程序最合适的进程数应设置为4.
+\section{上机报告总结}
+此次上机作业，我们使用了MPI进行了第一次编程实践，对MPI的机理有了初步的
+认识，并对网格进行了一定规则的划分，使其负载尽量均衡。
+\par
+此外，我们计算了精确的每个进程需要索取的数据，这是对并行传输数据的一个
+简单的实践。
+\end{document}
+
