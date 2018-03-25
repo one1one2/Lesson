@@ -51,6 +51,7 @@ void u0(double x, vartype& u){
 }
 
 int main(int argc, char **argv){
+  if (argc != 3){ std::cout<< "Usage: ./main <N> <time>" <<std::endl; return 0; } 
   double t_begin = omp_get_wtime();
   int N = atoi(argv[1]);
 

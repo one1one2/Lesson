@@ -1,0 +1,4 @@
+文档位于doc 
+方程位于program 
+其中hw2.m为主文件，heat.m,pm.m和shock-filter.m为实现各个子函数的文件。
+

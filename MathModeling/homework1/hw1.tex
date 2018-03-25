@@ -1,0 +1,163 @@
+\documentclass[a4paper,  11pt]{ctexart}
+\usepackage{srcltx,graphicx}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{color}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{psfrag}
+\usepackage{diagbox}
+\usepackage[hang]{subfigure}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=black,anchorcolor=blue,citecolor=green]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{comment}{Comment}
+\newtheorem{conjecture}{Conjecture}
+
+\newcommand\bbR{\mathbb{R}}
+\newcommand\bbN{\mathbb{N}}
+\newcommand\bbC{\mathbb{C}}
+\newcommand\bx{\boldsymbol{x}}
+\newcommand\dd{\,\mathrm{d}}
+
+\newcommand\diag{\mathrm{diag}}
+\newcommand\tr{\mthrm{tr}}
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{150mm}
+\setlength{\textheight}{230mm}
+\renewcommand\thesection{\arabic{section}} 
+\newcommand\note[2]{{{\bf #1}\color{red} [ {\it #2} ]}}
+%\newcommand\note[2]{{ #1 }} % using this line in the formal version
+
+\newcommand\pd[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand\od[2]{\dfrac{\dd {#1}}{\dd {#2}}}
+\newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
+
+\begin{document}
+\title{数学模型HW1}
+\maketitle
+% \tableofcontents
+% \newpage
+\section{第一题}
+\subsection{}
+Conservation law:
+\[
+     u_t + \left(\frac{u^2}{2}-\mu u_x\right)_x=0,\quad x\in\bbR,\quad
+     t>0.
+\]
+
+Flux function: 
+\(
+    \frac{u^2}{2}-\mu u_x.
+\)
+\subsection{}
+Hopf-Cole变换：
+\[ 
+u = -a\pd{}{x}\ln \phi = -a\frac{\phi_x}{\phi}.
+\]
+将Hopf-Cole 变换带入到原方程，并利用$a=2\mu$,
+\[
+-2\mu\frac{\phi\phi_{xt}-\phi_x\phi_t}{\phi^2}
++4\mu^2\frac{\phi\phi_x\phi_{xx}-\phi_x^3}{\phi^3}
+=-2\mu^2\frac{\phi^2(\phi_x\phi_{xx}+\phi\phi_{xxx}-2\phi_x\phi_{xx})
+-2\phi\phi_x(\phi\phi_{xx}-\phi_x^2)
+}{\phi^4},
+\]
+化简可得
+\[
+-2\mu\frac{\phi\phi_{xt}-\phi_x\phi_t}{\phi^2}
+=-2\mu^2\frac{\phi\phi_{xxx}-\phi_x\phi_{xx}
+}{\phi^2},
+\]
+即
+\[ 
+  \left(
+  \frac{\phi_t}{\phi}-\mu\frac{\phi_{xx}}{\phi}
+  \right)_x=0.
+\]
+因此
+\[ 
+   \frac{1}{\phi}\phi_t-\mu\frac{1}{\phi}\phi_{xx}=g(t)
+\]
+是一个只关于$t$的函数。
+
+
+\section{第二题}
+\subsection{}
+\[ 
+   \od{f}{t} = \pd{f}{t} + \pd{f}{q}\cdot\pd{q}{t}+\pd{f}{p}\cdot 
+   \pd{p}{t}.
+\]
+根据守恒律，我们有
+\[ 
+\pd{f}{t} + \pd{(f\dot{q})}{q} + \pd{(f\dot{p})}{p} = 0.
+\]
+将上式展开，我们有
+\[ 
+\pd{f}{t} + \pd{f}{q}\cdot\pd{q}{t} + \pd{f}{p}\cdot\pd{p}{t} 
++ f\left( \pd{\dot{q}}{q}+\pd{\dot{p}}{p}\right)= 0.
+\]
+又由
+\[
+    \dot{p} = \pd{H}{q},\quad \dot{q} = -\pd{H}{p},
+\]
+因此
+\[  
+    \pd{\dot{q}}{q} + \pd{\dot{p}}{p} = -\pd{^2H}{p\partial
+    q}+\pd{^2H}{q\partial p}=0.
+\]
+因此我们有
+\[ 
+   \od{f}{t} = \pd{f}{t} + \pd{f}{q}\cdot\pd{q}{t}+\pd{f}{p}\cdot 
+   \pd{p}{t} = 0.
+\]
+\subsection{}
+对于任意区域$\Omega$，
+\[
+\od{}{t} \int_\Omega f(t,q,p)\dd q\dd p = 
+\int_\Omega \pd{f}{t} \dd q\dd p = \int_\Omega
+-\nabla\cdot(f\dot{q},f\dot{p})
+\dd q\dd p = -\int_{\partial\Omega} (f\dot{q},f\dot{p})\cdot
+\overrightarrow{\bm{n}}\dd S
+\]
+当$\Omega$包含了$f$的支集时，根据上式我们可得
+
+\[  
+\od{}{t}\int f(t,q,p)\dd q\dd p  = 0.
+\]
+
+\section{第三题}
+\subsection{}
+\begin{align*}
+  \begin{aligned}
+\od{}{t}\int |u|^2\dd x &= \int \pd{}{t}|u|^2 \dd x \\
+&= \int (u_t\bar{u}+u\bar{u}_t)\dd x \\
+&= \int \left(\frac{\hat{H}}{i\hbar}u\bar{u}
+-u\frac{\bar{\hat{H}}}{i\hbar}\bar{u}
+\right)\dd x \\ 
+&= 0
+   \end{aligned}
+\end{align*}
+其中最后一步利用了$\hat{H}$是一个自伴算子。
+\subsection{}
+由上题我们可知
+\[ 
+   \int |u(x,t)|^2 \dd x = \int |u(x,0)|^2 \dd x, \quad \forall t\geq
+   0.
+\]
+因此所求的$\varepsilon$满足
+\[  
+1 = \int_{\bbR^d} a^2e^{-2|x|^2/\varepsilon}\dd x =
+a^2\left(\frac{\varepsilon\pi}{2}\right)^{d/2}.
+\]
+(此处利用了$\int_{\bbR^d} e^{-A|x|^2}\dd x = (\pi/A)^{d/2}$.)
+
+因此 
+\[   
+\varepsilon = \frac{2}{\pi a^{4/d}}.
+\]
+\end{document}

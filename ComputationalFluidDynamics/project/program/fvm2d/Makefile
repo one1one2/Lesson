@@ -10,6 +10,7 @@ all : main
 
 main : $(source) $(include)
 	$(CXX) -o $@  $(source) $(LDFLAGS)
+	@echo "Usage: ./main <M> <N> <time>"
 
 clean:
 	-rm -f $(exe)

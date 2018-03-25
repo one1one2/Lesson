@@ -8,6 +8,7 @@ all : main
 
 main : main.cpp fvm1d.cpp *.h
 	$(CXX) -o $@  $(source) $(LDFLAGS)
+	@echo "Usage: ./main <N> <time>"
 
 clean:
 	-rm -f $(exe)

@@ -44,7 +44,7 @@ int transform(int i, int j, int k,int N){
 			+ j * (2 * N - 2 * k - j + 3) / 2 + i;  
 }
 int main(int argc, char *argv[]){
-    int rank, size;
+  int rank, size;
 	int N;
 	double CFL = 0.1;
 	double t_end;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]){
 	std::vector<double> sol;
 //	std::string filename1, filename2, filename3;
 	MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 	if (rank == 0){	
 		if (argc < 3){

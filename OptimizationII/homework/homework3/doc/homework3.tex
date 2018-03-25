@@ -1,0 +1,243 @@
+\documentclass[a4paper,  11pt]{ctexart}
+\usepackage{srcltx,graphicx}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{color}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{setspace}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{psfrag}
+\usepackage{diagbox}
+\usepackage{multirow}
+\usepackage[hang]{subfigure}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=red,anchorcolor=blue,citecolor=green]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{comment}{Comment}
+\newtheorem{conjecture}{Conjecture}
+
+\newcommand\bbR{\mathbb{R}}
+\newcommand\bbN{\mathbb{N}}
+\newcommand\bbC{\mathbb{C}}
+\newcommand\bx{\boldsymbol{x}}
+\newcommand\dd{\,\mathrm{d}}
+
+\newcommand\diag{\mathrm{diag}}
+\newcommand\tr{\mthrm{tr}}
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{150mm}
+\setlength{\textheight}{230mm}
+
+\newcommand\note[2]{{{\bf #1}\color{red} [ {\it #2} ]}}
+%\newcommand\note[2]{{ #1 }} % using this line in the formal version
+
+\newcommand\pd[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand\od[2]{\dfrac{\dd {#1}}{\dd {#2}}}
+\newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}} 
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+\begin{document}
+\title{最优化理论与方法第三次上机作业}
+\author{郑灵超\thanks{Email: lczheng@pku.edu.cn}\quad 1601110040}
+\maketitle
+%\tableofcontents
+%\newpage
+\section{上机作业介绍}
+Minimax 问题是最优化一类经典的最优化问题，其描述如下：
+\begin{equation}
+  \min_{x} \max_{1\leq i \leq m} f_i(x).
+\end{equation}
+由于对象函数
+\begin{equation}
+  F(x) = \max_{1\leq i \leq m}f_i(x) 
+\end{equation}
+并不一定是可微函数，传统的优化方法往往难以奏效，我们需要为其单独设计算
+法进行优化。
+\section{算法介绍}
+\subsection{光滑函数方法}
+在\cite{smooth}中，作者提出引入一个光滑函数来逼近目标函数$F(x)$,
+\begin{equation}
+  f(x,\mu) = \mu \ln \sum_{i=1}^m \exp\left(\frac{f_i(x)}{\mu}\right)
+\end{equation}
+不难证明$f(x,\mu)$关于$\mu$单调递增，且
+\[ 
+   F(x)\leq f(x,\mu) \leq F(x) + \mu \ln m,
+\]
+因此当$\mu\rightarrow 0$时，可以用$f(x,\mu)$给出目标函数一个较好的逼近。
+因此我们对$\mu\rightarrow 0$时的$f(x,\mu)$进行优化操作，就能实现对原目
+标函数的优化。
+\subsubsection*{算法说明}
+\begin{enumerate}
+  \item 设置初始点$x_0$,初始参数$\mu>0,0<\beta<1$.
+  \item 利用Newton方法计算此时的负梯度方向：
+    \begin{equation}
+      \nabla_x^2f(x,\mu)d = -\nabla_x f(x,\mu).
+    \end{equation}
+  \item 利用线搜索计算步长$\alpha$.
+  \item $x=x+\alpha d$.
+  \item $\mu = \mu\beta$，若满足终止条件，则终止；否则回到第二步。
+\end{enumerate}
+\subsection{Least-p方法}
+在\cite{leastp}中，作者对
+Least-p方法进行了改进，采用了另外一种函数逼近形式
+
+\begin{equation}
+  U(x,u,p,\xi) = \left\{ 
+  \begin{aligned}
+  &M(x,\xi)\left(\sum_{i\in S(x,\xi)} 
+  u_i\left(\frac{f_i(x)-\xi)}{M(x,\xi)}\right)^q
+  \right)^{1/q},\quad &M(x,\xi)\neq 0\\ 
+  &0 \quad & M(x,\xi)=0.
+\end{aligned}
+  \right.
+\end{equation}
+其中 
+\begin{align}
+  u_i\geq 0,\quad \sum_{i\in I} u_i = 1,\quad q =
+  p\times\text{sgn}(M(x,\xi)),
+\end{align}
+而
+\begin{align}
+   M(x,\xi)=F(x)-\xi,\quad S(x,\xi) = \{i\in I| (f_i(x)-\xi)M(x,\xi) >
+   0\}.
+\end{align}
+\subsubsection*{算法说明}
+\begin{enumerate}
+  \item 设置初始$p\geq 1,c\geq 1,u,\xi,x_0$
+  \item 在当前参数下极小化逼近函数。
+  \item 重新设置参数
+    \[
+       u_i = \frac{v_i}{\sum_{i\in I} v_i}, \quad i\in I,
+    \]
+    其中
+    \[
+         v_i = \left\{
+         \begin{aligned}
+           &u_i\left( \frac{f_i(x)-\xi}{M(x,\xi)}\right)^{q-1},\quad
+           &i\in S(x,\xi),\\ 
+           &0,\quad &i\in I - S(x,\xi).
+         \end{aligned}
+         \right.
+    \]
+  \item 若满足终止条件，则终止；否则$p=cp$,回到第二步.
+\end{enumerate}
+\subsection{SQP方法}
+我采用了\cite{SQP}中提出的用于求解Minimax问题的SQP算法，其算法如下：
+\subsubsection*{算法介绍}
+\begin{enumerate}
+  \item 选取初始点$X_0$,初始正定对称矩阵$B=I$,取
+    $0<\sigma<\frac{1}{2},0<\delta\leq 1,\varepsilon\geq 0$.
+  \item 求解二次规划问题
+    \begin{align}
+      \begin{aligned}
+        &\min \quad  \frac 12 d^TBd + \frac{\delta}{2}t^2 + t,\\
+        &s.t. \quad \nabla f_i(x)^Td-t\leq F(x)-f_i(x),\quad 1\leq
+        i\leq m.
+      \end{aligned}
+    \end{align}
+  其最优解设为$(d,t)$，相应的Lagrange乘子为$\lambda$,置
+  \[ 
+    d = \frac{d}{1+\delta t},\quad \lambda = \frac{\lambda}{1+\delta
+    t}.
+  \]
+\item 若$\Vert d\Vert\leq \varepsilon$，则终止，否则取$0<\beta<1$
+\item 计算最小的满足
+  \begin{align}
+    F(x+\beta^jd)\leq F(x) + \sigma\beta^j t
+  \end{align}
+  的自然数$j$,取$x' = x+\beta^jd$.
+  \item 修正$B$,
+    \begin{align*}
+      &s = x'-x,\\
+      &y = \sum_{i=1}^m \lambda_i \left[
+      \nabla f_i(x')-\nabla f_i(x)
+      \right],\\
+      &y = \theta y+(1-\theta)Bs,
+    \end{align*}
+    其中 
+    \begin{align*}
+      \theta = \left\{
+      \begin{aligned}
+        &1,\quad &y's\geq 0.2s'Bs,\\
+        &\frac{0.8s'Bs}{s'Bs-y's},\quad &otherwise.
+      \end{aligned}
+      \right.
+    \end{align*}
+    令
+    \begin{align}
+      B = B - \frac{Bss'B}{s'Bs}+\frac{yy'}{y's}.
+    \end{align}
+    转步2.
+\end{enumerate}
+\section{数值结果}
+本次上机报告我们测试了三个案例：
+\subsection{例1}
+第一个例子是\cite{smooth}中的exmaple 1,三种方法的计算结果如下：
+\begin{itemize}
+  \item 光滑函数方法: 
+    在21步迭代后到达解$(1.1390,0.8996)^T$，函数调用次数为84.
+  \item Least-p方法:
+    在22步迭代后到达解$(1.1390,0.8996)^T$，函数调用次数为88.
+  \item SQP方法:
+    在8步迭代后到达解$(1.1390,0.8996)^T$，函数调用次数为12.
+\end{itemize}
+\subsection{例3}
+第一个例子是\cite{smooth}中的exmaple 3，即Rosen-Suzuki 问题
+,三种方法的计算结果如下：
+\begin{itemize}
+  \item 光滑函数方法: 
+    在24步迭代后到达解$(0,1,2,-1)^T$，函数调用次数为110.
+  \item Least-p方法:
+    在17步迭代后到达解$(0,1,2,-1)^T$，函数调用次数为79.
+  \item SQP方法:
+    在22步迭代后到达解$(0,1,2,-1)^T$，函数调用次数为150.
+\end{itemize}
+\subsection{滤波器问题}
+第一个例子是\cite{leastp}中的digital filter问题，三种方法的计算结果如下：
+\begin{itemize}
+  \item 光滑函数方法: 
+  无法计算。
+  \item Least-p方法:
+  无法计算。
+  \item SQP方法:
+    在39步迭代后到达解
+    $(0.0001,0.9801,0.0000,-0.1657,0.0001,-0.7351,\\
+    0.0001,-0.7672,0.3679)^T$，
+    函数调用次数为357,函数值$f=0.006189$.
+\end{itemize}
+
+
+
+\section{上机报告总结}
+本次上机报告，我们实现了三种梯度型下降方法，在此作一个总结：
+\begin{enumerate}
+\item 光滑函数法和Least-p法都是利用一个带参数的光滑函数来逼近目标函数
+  ，再令参数趋于0或无穷，来实现对目标函数的逼近。可能是由于我们在求解其子问
+  题时采用Newton迭代法，对较为复杂的滤波器问题，这两个方法的表现并不好
+  。
+\item SQP方法是用于求解二次规划问题的经典方法，我们这里采用了matlab自
+  带的quadprog函数求解它的二次规划子问题。该方法对测试的三个例子均有不
+  错的表现。
+\end{enumerate}
+\renewcommand\refname{参考文献}
+\begin{thebibliography}{99}
+    \bibitem{smooth}Song Xu. Smoothing Method for Minimax Problems.
+    Computational Optimization and Applications, 20, 267–279, 2001.
+  \bibitem{leastp}
+    Christakis CHARALAMBOUS. 
+    ACCELERATION OF THE LEAST pth ALGORITHM
+FOR MINIMAX OPTIMIZATION WITH ENGINEERING
+APPLICATIONS.Mathematical Programming 17 (1979) 270-297. 
+\bibitem{SQP}薛毅.求解Minimax优化问题的SQP方法.系统科学与数学, 22， 
+  355-364， 2002.
+\end{thebibliography}
+
+\end{document}
+

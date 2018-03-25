@@ -20,7 +20,7 @@ private:
 	typedef double (*RHS)(double, double, double, double); 
 	typedef double (*RHF)(double, double, double);
 	typedef std::vector<std::vector<int> > INDEX;
-    typedef std::vector<double> SOL;
+  typedef std::vector<double> SOL;
 	int begin, end, length, send_forward, send_backward;
 	int recv_forward, recv_backward;
 	

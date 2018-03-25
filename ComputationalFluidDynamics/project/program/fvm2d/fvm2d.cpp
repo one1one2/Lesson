@@ -58,7 +58,7 @@ void This::GetMaxspeed(){
       maxspeed = std::max(maxspeed, fabs(u[2]/u[0]) + sqrt(gamma*p/u[0]));
     }
   }
-  maxspeed *= 2; 
+  //maxspeed *= 2; 
   std::cout << "MaxSpeed = " << maxspeed<<std::endl; 
 }
 
@@ -72,21 +72,6 @@ void This::ForwardOnestep(){
   U1 = U; U2=U;
   GetNumericalFlux(U, F1, G1);
 #ifdef RK
-//#pragma omp parallel for num_threads(N_thread)
-  //for (int i = 0; i < M; ++i){
-    //for (int j = 0; j < N; ++j){
-      //U1[i][j] += dt*F1[i][j] + dt*G1[i][j];
-    //}
-  //}
-  //GetNumericalFlux(U1, F2, G2);
-//#pragma omp parallel for num_threads(N_thread)
-  //for (int i = 0; i < M; ++i){
-    //for (int j = 0; j < N; ++j){
-      //U_temp[i][j] += dt/2*(F1[i][j] + G1[i][j]
-            //+F2[i][j] + G2[i][j]);
-    //}
-  //}
-//#endif
 #pragma omp parallel for num_threads(N_thread)
   for (int i = 0; i < M; ++i){
     for (int j = 0; j < N; ++j){
@@ -147,14 +132,14 @@ void This::Reconstruction(int i, int j, const soltype& _U){
   uu = _U[i][_u];
   for (int k = 0; k < u.size(); ++k){
     double ratio = 0;
-    if (fabs(u[k] - ur[k])>1e-16){
+    if (fabs(u[k] - ur[k]) > 1e-16){
       ratio = (u[k] - ul[k])/(ur[k] - u[k]);
       ratio = limiter(ratio)*(ur[k] - u[k]);
     }
     UL[i][j][k] = u[k] - ratio/2;
     UR[i][j][k] = u[k] + ratio/2;
     ratio = 0;
-    if (fabs(u[k] - uu[k])>1e-16){
+    if (fabs(u[k] - uu[k]) > 1e-16){
       ratio = (u[k] - ud[k])/(uu[k] - u[k]);
       ratio = limiter(ratio)*(uu[k] - u[k]);
     }
@@ -199,18 +184,16 @@ if (Problem==DoubleMachReflection){
       //Right 出流边界条件 
       if (i == M - 1) u_temp = UR[i][j];
       else u_temp = UL[i+1][j];
+//前台阶问题的反射边界
 if (Problem==ForwardStep){
       if (xl + i*hx == 0.6 && yd + j*hy <= 0.2){
         u_temp = UR[i][j];
         u_temp[1] *= -1; 
       }
 }
-//if (u_temp[1]<0) std::cout<<i<<" "<<j<<" "<<UR[i][j]<<std::endl;
       NumericalFlux_x(UR[i][j], u_temp, Fr);
-      
       F[i][j] = (Fl - Fr)/hx;
-      
-      //Down
+//Down
 if (Problem==DoubleMachReflection){
       if (j == 0){
         if (xl + i*hx >= 1./6){
@@ -229,7 +212,7 @@ if (Problem==DoubleMachReflection){
     else u_temp = UU[i][j-1];
 }  
     NumericalFlux_y(u_temp, UD[i][j], Gd);
-      //Up
+//Up
 if (Problem==DoubleMachReflection){
       if (j == N - 1){
         if (1 > sqrt(3.)*(xl + i*hx - 1./6) - 20*t_now)
@@ -245,39 +228,33 @@ if (Problem==DoubleMachReflection){
 }
       NumericalFlux_y(UU[i][j], u_temp, Gu);
       G[i][j] = (Gd - Gu)/hy;
-      //if (fabs(G[i][j][0])>10000 && j > 0 && j < N - 1) {
-        //std::cout<<_U[i][d]<<" | "<<
-      //_U[i][j]<<" | "<<_U[i][_u]<<std::endl;
-        //std::cout<<Gu<<" | "<<Gd<<std::endl; }
     }
   }
 }
 
 
 void This::NumericalFlux_x(const vartype& ul, const vartype& ur, vartype& F){
-  LF(ul, ur, flux_x, dt/hx, F);
-  //double pl = (gamma - 1)*(ul[3] - 
-        //0.5*ul[1]*ul[1]/ul[0] - 0.5*ul[2]*ul[2]/ul[0]);
-  //double pr = (gamma - 1)*(ur[3] - 
-        //0.5*ur[1]*ur[1]/ur[0] - 0.5*ur[2]*ur[2]/ur[0]);
-  //double SL, SR;
-  //SL = std::min(ur[1]/ur[0] - sqrt(gamma*pr/ur[0]), ul[1]/ul[0] - sqrt(gamma*pl/ul[0]));
-  //SR = std::max(ur[1]/ur[0] + sqrt(gamma*pr/ur[0]), ul[1]/ul[0] + sqrt(gamma*pl/ul[0]));
-  //HLL(ul, ur, flux_x, SL, SR, F);
+  //LF(ul, ur, flux_x, dt/hx, F);
+  double pl = (gamma - 1)*(ul[3] - 
+        0.5*ul[1]*ul[1]/ul[0] - 0.5*ul[2]*ul[2]/ul[0]);
+  double pr = (gamma - 1)*(ur[3] - 
+        0.5*ur[1]*ur[1]/ur[0] - 0.5*ur[2]*ur[2]/ur[0]);
+  double SL, SR;
+  SL = std::min(ur[1]/ur[0] - sqrt(gamma*pr/ur[0]), ul[1]/ul[0] - sqrt(gamma*pl/ul[0]));
+  SR = std::max(ur[1]/ur[0] + sqrt(gamma*pr/ur[0]), ul[1]/ul[0] + sqrt(gamma*pl/ul[0]));
+  HLL(ul, ur, flux_x, SL, SR, F);
 }
   
 void This::NumericalFlux_y(const vartype& ul, const vartype& ur, vartype& F){
-  LF(ul, ur, flux_y, dt/hy, F);
-  //double pl = (gamma - 1)*(ul[3] - 
-        //0.5*ul[1]*ul[1]/ul[0] - 0.5*ul[2]*ul[2]/ul[0]);
-  //double pr = (gamma - 1)*(ur[3] - 
-        //0.5*ur[1]*ur[1]/ur[0] - 0.5*ur[2]*ur[2]/ur[0]);
-
-  //double SL, SR;
-  //SL = std::min(ur[2]/ur[0] - sqrt(gamma*pr/ur[0]), ul[2]/ul[0] - sqrt(gamma*pl/ul[0]));
-  //SR = std::max(ur[2]/ur[0] + sqrt(gamma*pr/ur[0]), ul[2]/ul[0] + sqrt(gamma*pl/ul[0]));
-
-  //HLL(ul, ur, flux_y, SL, SR, F);
+  //LF(ul, ur, flux_y, dt/hy, F);
+  double pl = (gamma - 1)*(ul[3] - 
+        0.5*ul[1]*ul[1]/ul[0] - 0.5*ul[2]*ul[2]/ul[0]);
+  double pr = (gamma - 1)*(ur[3] - 
+        0.5*ur[1]*ur[1]/ur[0] - 0.5*ur[2]*ur[2]/ur[0]);
+  double SL, SR;
+  SL = std::min(ur[2]/ur[0] - sqrt(gamma*pr/ur[0]), ul[2]/ul[0] - sqrt(gamma*pl/ul[0]));
+  SR = std::max(ur[2]/ur[0] + sqrt(gamma*pr/ur[0]), ul[2]/ul[0] + sqrt(gamma*pl/ul[0]));
+  HLL(ul, ur, flux_y, SL, SR, F);
 }
 
 #undef This 

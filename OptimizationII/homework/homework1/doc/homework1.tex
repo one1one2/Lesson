@@ -1,0 +1,307 @@
+\documentclass[a4paper,  11pt]{ctexart}
+\usepackage{srcltx,graphicx}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{color}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{setspace}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{psfrag}
+\usepackage{diagbox}
+\usepackage{multirow}
+\usepackage[hang]{subfigure}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=red,anchorcolor=blue,citecolor=green]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{comment}{Comment}
+\newtheorem{conjecture}{Conjecture}
+
+\newcommand\bbR{\mathbb{R}}
+\newcommand\bbN{\mathbb{N}}
+\newcommand\bbC{\mathbb{C}}
+\newcommand\bx{\boldsymbol{x}}
+\newcommand\dd{\,\mathrm{d}}
+
+\newcommand\diag{\mathrm{diag}}
+\newcommand\tr{\mthrm{tr}}
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{150mm}
+\setlength{\textheight}{230mm}
+
+\newcommand\note[2]{{{\bf #1}\color{red} [ {\it #2} ]}}
+%\newcommand\note[2]{{ #1 }} % using this line in the formal version
+
+\newcommand\pd[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand\od[2]{\dfrac{\dd {#1}}{\dd {#2}}}
+\newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}} 
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+\begin{document}
+\title{最优化理论与方法第一次上机作业}
+\author{郑灵超\thanks{Email: lczheng@pku.edu.cn}\quad 1601110040}
+\maketitle
+%\tableofcontents
+%\newpage
+\section{上机作业介绍}
+本次上机作业的任务是编写带步长Newton方法，稳定Newton方法和
+More-Sorensen方法的代码，并在几个测试函数上检验他们的性质。
+\section{算法介绍}
+\subsection{带步长Newton方法}
+带步长的Newton方法是在传统的Newton方法的基础上，不再限制迭代步长为1，
+而利用线搜索来寻找合适的步长，其算法为：
+\begin{algorithm}[H]
+\setstretch{1.35} 
+\caption{带步长Newton方法}
+\begin{algorithmic}[2]
+\REQUIRE ~~\\
+函数信息，包括函数值$f$，梯度值$g$和Hesse矩阵$G$; \quad 初始点$x_0$;
+
+\ENSURE ~~\\
+最小值点$x$，函数值$f(x)$,迭代次数iter，函数调用次数feva;
+
+\hspace{-0.65cm}\textbf{Procedure:}
+
+\textbf{Step 1:}  初始设置$k = 0$, $\varepsilon_f>0$; \\
+\textbf{Step 2:}  计算$x_k$处的函数值，梯度和Hesse矩阵$f_k,g_k,G_k$; \\
+\textbf{Step 3:}  若$k>0$且$|f_{k}-f_{k-1}|<\varepsilon_f$，循环终止，并输出
+$x_k,f_k$;\\
+\textbf{Step 4:}  计算Newton方法的下降方向$d_k$: $G_kd_k=-g_k$;\\
+\textbf{Step 5:}  利用线搜索计算步长$\alpha_k$;\\
+\textbf{Step 6:}  计算$x_{k+1}=x_k+\alpha_kd_k$; \\
+\textbf{Step 7:}  令$k=k+1$,回到\textbf{Step 2}.
+\end{algorithmic}
+\end{algorithm}
+带步长Newton方法在传统的Newton方法的基础上引入了线搜索的步长，得到了比
+传统Newton方法更广泛的应用。但当Hesse矩阵不正定时，可能会出现下降方向
+无法计算的情况。
+\subsection{稳定Newton方法}
+稳定Newton方法利用了修正Cholesky分解
+\footnote{修正Cholesky分解参见\cite{article1}的Algorithm 3.3.2.}
+，使得计算所得的下降方向始终满足
+$g^Td<0$，其算法\footnote{\cite{article1}中Algorithm 3.5.4}为：
+\begin{algorithm}[H]
+\setstretch{1.35} 
+\caption{稳定Newton方法}
+\begin{algorithmic}[2]
+\REQUIRE ~~\\
+函数信息，包括函数值$f$，梯度值$g$和Hesse矩阵$G$; \quad 初始点$x_0$;
+
+\ENSURE ~~\\
+最小值点$x$，函数值$f(x)$,迭代次数iter，函数调用次数feva;
+
+\hspace{-0.65cm}\textbf{Procedure:}
+
+\textbf{Step 1:}  初始设置$k = 0$, $\varepsilon_f,\varepsilon_g>0$; \\
+\textbf{Step 2:}  计算$x_k$处的函数值，梯度和Hesse矩阵$f_k,g_k,G_k$; \\
+\textbf{Step 3:}  若$k>0$且$|f_{k}-f_{k-1}|<\varepsilon_f$，循环终止，并输出
+$x_k,f_k$;\\
+\textbf{Step 4:}  计算Hesse矩阵$G_k$的修正Cholesky分解
+:
+$G_k+E_k=L_kD_kL^T_k$;\\
+\textbf{Step 5:}  计算下降方向$d_k$:\\
+\hspace{1.52cm}若$\Vert g_k\Vert>\varepsilon_g,
+L_kD_kL^T_kd_k=-g_k$;\\
+\hspace{1.52cm}
+否则设$D_{j,j}-E_{j,j}$当$j=t$时取到最小值$\varphi$,\\
+\hspace{1.52cm}
+若$\varphi\geq0$,终止并输出;否则求解$L^T_kd_k=e_t$;\\
+
+\textbf{Step 6:}  对$d_k$进行修正：若$g_k^Td_k>0$，取$d_k=-d_k$;\\
+\textbf{Step 7:}  利用线搜索计算步长$\alpha_k$;\\
+\textbf{Step 8:}  计算$x_{k+1}=x_k+\alpha_kd_k$; \\
+\textbf{Step 9:}  令$k=k+1$,回到\textbf{Step 2}.
+\end{algorithmic}
+\end{algorithm}
+稳定Newton方法利用修正Cholesky分解解决了当Hesse矩阵有零特征值和负特征
+值而导致的下降方向无法计算的情况，得到了一个始终满足$g^Td\leq0$的下降方向
+$d$，并在不定点处给出了二阶下降方向$d$,满足$d^TGd<0$.
+\subsection{More-Sorensen方法}
+More-Sorensen方法提出了二阶Wolfe准则:
+\begin{align*}
+  x(\alpha)=x_k+\alpha^2s_k+\alpha d_k,\quad (s_k,d_k)\text{是
+  }x_k\text{处的下降对},
+\end{align*}
+满足
+\begin{gather}
+  \label{eq:wolfe1}
+  f(x(\alpha))\leq f(x)+\rho\alpha^2\left[ \nabla f(x)^{T}s+\frac{1}{2}
+  d^T\nabla^{2}f(x)d\right],\\
+  \label{eq:wolfe2}
+  \nabla f(x(\alpha))^Tx'(\alpha)\geq \sigma\left[ \nabla f(x)^Td+
+  2\alpha\nabla f(x)^Ts+\alpha d^T\nabla^2f(x)d\right],
+\end{gather}
+其中$0<\rho\leq\sigma<1$.
+\begin{algorithm}[H]
+\setstretch{1.35} 
+\caption{More-Sorensen方法}
+\begin{algorithmic}[2]
+\REQUIRE ~~\\
+函数信息，包括函数值$f$，梯度值$g$和Hesse矩阵$G$; \quad 初始点$x_0$;
+
+\ENSURE ~~\\
+最小值点$x$，函数值$f(x)$,迭代次数iter，函数调用次数feva;
+
+\hspace{-0.65cm}\textbf{Procedure:}
+
+\textbf{Step 1:}  初始设置$k = 0$, $\varepsilon_f>0$; \\
+\textbf{Step 2:}  计算$x_k$处的函数值，梯度和Hesse矩阵$f_k,g_k,G_k$; \\
+\textbf{Step 3:}  若$k>0$且$|f_{k}-f_{k-1}|<\varepsilon_f$，循环终止，并输出
+$x_k,f_k$;\\
+\textbf{Step 4:}  计算下降对$(s_k,d_k)$；若下降对无法计算，终止并输出；\\
+\textbf{Step 5:}  对$d_k$进行修正：若$g_k^Td_k>0$，取$d_k=-d_k$;\\
+\textbf{Step 6:}  计算步长$\alpha_k$;\\
+\textbf{Step 7:}  计算$x_{k+1}=x_k+\alpha_kd_k$; \\
+\textbf{Step 8:}  令$k=k+1$,回到\textbf{Step 2}.
+\end{algorithmic}
+\end{algorithm}
+其中下降对的计算方法参见\cite{article1}的162-163页，而步长我们选取
+$\alpha=\gamma^i$中满足二阶Wolfe条件\eqref{eq:wolfe1}和
+\eqref{eq:wolfe2}的$i$最小的一个，其中
+$0<\gamma<1$为参数。
+
+\section{程序说明}
+本次提交的代码包含以下文件：
+\begin{itemize}
+  \item test.m: ~~ 运行文件，可以设置求解方法和求解问题。
+  \item DampedNewton.m: ~~ 带步长Newton方法的函数。
+  \item StableNewton.m: ~~ 稳定Newton方法的函数。
+  \item ModCholesky.m ~~ 稳定Newton方法需要用到的修正Cholesky函数。
+  \item Sorensen.m: ~~ More Sorensen方法的函数。
+  \item DescentPair.m ~~ More Sorensen方法需要用到的计算下降对的函数。
+\end{itemize}
+设置的参数为
+\[  
+\varepsilon_f=10^{-25},\quad \varepsilon_g=10^{-15}.
+\]
+\section{数值结果}
+\subsection{Watson function}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+  方法 &  n & f(x*) & 迭代次数 & 函数调用次数  \\
+  \hline 
+  \multirow{5}{*}{带步长Newton方法} & 6 & 2.3e-3 & 85 & 388 \\
+  \cline{2-5}
+  & 9& 1.3998e-6 & 109 & 500 \\
+  \cline{2-5}
+  & 12 & 4.7224e-10 & 103 & 286 \\
+  \cline{2-5}
+  & 15 & / & / & / \\
+  \cline{2-5}
+  & 18 & / & / & / \\
+  \hline
+  \multirow{5}{*}{稳定Newton方法} & 6 & 2.3e-3 & 62 & 462 \\
+  \cline{2-5}
+  & 9& 1.3998e-6 & 9 & 250 \\
+  \cline{2-5}
+  & 12 & 4.7224e-10 & 68 & 351 \\
+  \cline{2-5}
+  & 15 & 8.448e-13 & 52 & 1325 \\
+  \cline{2-5}
+  & 18 & 5.9097e-9 & 36 & 900 \\
+  \hline
+  \multirow{5}{*}{More-Sorensen方法} & 6 & 2.3e-3 & 13 & 14 \\
+  \cline{2-5}
+  & 9& 1.3998e-6 & 14 & 15 \\
+  \cline{2-5}
+  & 12 & 4.7224e-10 & 14 & 15 \\
+  \cline{2-5}
+  & 15 & 2.7500e-8 & 12 & 2051 \\
+  \cline{2-5}
+  & 18 & 1.0197e-7 & 11 & 2050 \\
+  \hline
+  
+  \end{tabular}
+\end{table}
+此处我们对于步长Newton和稳定Newton均采用强Wolfe准则的线搜索，其中稳定
+Newton在n=9时该方法失效，采用精确线搜索。
+
+比较三个方法可以发现稳定Newton方法和More-Sorensen方法比起步长
+Newton方法更具有稳定性，能解决Hesse矩阵接近奇异和不定的情形。
+\subsection{Extended Powell singular function}
+\begin{table}[H]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+  方法 &  n & f(x*) & 迭代次数 & 函数调用次数  \\
+  \hline 
+  \multirow{5}{*}{带步长Newton方法} 
+  & 20 & 9.6476e-17 & 18 & 76 \\
+  \cline{2-5}
+  & 40& 1.9187e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 60 & 2.8781e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 80 & 3.8375e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 100 & 4.7968e-17 & 19 & 80 \\
+  \hline
+  \multirow{5}{*}{稳定Newton方法} 
+  & 20 & 9.6476e-17 & 18 & 76 \\
+  \cline{2-5}
+  & 40& 1.9187e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 60 & 2.8781e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 80 & 3.8375e-17 & 19 & 80 \\
+  \cline{2-5}
+  & 100 & 4.7968e-17 & 19 & 80 \\
+  \hline
+  \multirow{5}{*}{More-Sorensen方法} 
+  & 20 & 2.2507e-16 & 25 & 27 \\
+  \cline{2-5}
+  & 40& 9.2510e-17 & 27 & 28 \\
+  \cline{2-5}
+  & 60 & 1.3877e-16 & 27 & 28 \\
+  \cline{2-5}
+  & 80 & 1.8502e-16 & 27 & 28 \\
+  \cline{2-5}
+  & 100 & 2.3128e-16 & 27 & 28 \\
+  \hline
+  
+  \end{tabular}
+\end{table}
+该问题三种方法都可以得到不错的结果，说明该问题本身的性质良好，而且
+该问题我们对步长Newton方法和稳定Newton方法都采用相同的非精确线搜索，
+可以发现这两种方法的计算结果完全一致，说明Hesse矩阵是一个正定矩阵。
+\subsection{Biggs EXP6 function}
+对于$m=13$的BiggsEXP6问题，我们的计算结果为：
+\begin{itemize}
+  \item 步长Newton方法：无法收敛到正确的解。
+  \item 稳定Newton方法：利用精确线搜索可以收敛，迭代次数37，函数调用次
+    数925，$x=(1,10,1,5,4,3)^T$,$f=2.3190e-18$.
+  \item More-Sorensen方法：可以收敛到正确解$x=(4,10,3,5,1,1)^T$,迭代次
+    数为25，函数调用次数39，$f=1.4785e-19$.
+\end{itemize}
+%\subsection{Discrete boundary value function}
+
+\section{上机报告总结}
+本次上机报告，我们实现了三种梯度型下降方法，在此作一个总结：
+\begin{enumerate}
+  \item 带步长Newton方法是普通Newton方法利用线搜索的一个推广，
+    能解决Hesse矩阵正定情况的问题，但对较为奇异的Hesse矩阵和不定的
+    Hesse矩阵比较乏力。
+  \item 稳定Newton方法利用了修正Cholesky分解，能够解决Hesse矩阵不正定
+    情况下的问题。
+  \item More-Sorensen方法利用了下降对的性质，能够解决Hesse矩阵不
+    定的问题，但对于接近0的特征值没有较好的机算结果。
+  \item 改进的两种计算方法无论是在计算结果，还是在迭代效率上，都比起初
+    始的Newton方法具有不小的提高。
+\end{enumerate}
+\renewcommand\refname{参考文献}
+\begin{thebibliography}{99}
+\bibitem{article1}Wenyu Sun and Ya-Xiang Yuan.
+  Optimization theory and methods: nonlinear
+  programming. Springer, 2006.
+\end{thebibliography}
+
+\end{document}
+

@@ -1,0 +1,12 @@
+#!/bin/bash 
+
+
+./main 40 40 0 > real40.dat &&\
+./main 40 40 .1 > weno40.dat &&\ 
+./main 80 80 0 > real80.dat &&\
+./main 80 80 .1 > weno80.dat &&\
+./main 160 160 0 > real160.dat &&\
+./main 160 160 .1 > weno160.dat &&\ 
+./main 320 320 0 > real320.dat &&\
+./main 320 320 .1 > weno320.dat 
+

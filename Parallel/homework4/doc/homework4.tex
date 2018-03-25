@@ -1,0 +1,205 @@
+\documentclass[a4paper,  11pt]{ctexart}
+\usepackage{srcltx,graphicx}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{color}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{psfrag}
+\usepackage{diagbox}
+\usepackage[hang]{subfigure}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=black,anchorcolor=blue,citecolor=green]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{comment}{Comment}
+\newtheorem{conjecture}{Conjecture}
+
+\newcommand\bbR{\mathbb{R}}
+\newcommand\bbN{\mathbb{N}}
+\newcommand\bbC{\mathbb{C}}
+\newcommand\bx{\boldsymbol{x}}
+\newcommand\dd{\,\mathrm{d}}
+
+\newcommand\diag{\mathrm{diag}}
+\newcommand\tr{\mthrm{tr}}
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{150mm}
+\setlength{\textheight}{230mm}
+
+\newcommand\note[2]{{{\bf #1}\color{red} [ {\it #2} ]}}
+%\newcommand\note[2]{{ #1 }} % using this line in the formal version
+
+\newcommand\pd[2]{\dfrac{\partial {#1}}{\partial {#2}}}
+\newcommand\od[2]{\dfrac{\dd {#1}}{\dd {#2}}}
+\newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
+
+\begin{document}
+\title{利用HYPRE并行求解三维热方程 \\ 并行计算第四次上机作业}
+\author{郑灵超}
+\maketitle
+\tableofcontents
+\newpage
+\section{问题介绍}
+本次要求解的方程为三维的热方程问题，其定义域为八面体
+\[
+ |x|+|y|+|z|\leq 1.
+\]
+方程形式和边界条件分别为
+\begin{equation}
+	\label{eq:Heatequation}
+	\left\{
+	\begin{aligned}
+	&u_t-\Delta u = f,  \\
+	&u|_{t=0} = u_0, \\
+	&u|_{|x|+|y|+z=1} = g_{up}, \\
+	&\pd{u}{\bm n}|_{|x|+|y|-z=1} = g_{down}. 
+\end{aligned}
+\right.
+\end{equation}
+
+\section{算法介绍}
+此次我们采用的算法是隐式差分格式，将求解区域按正方形网格剖分，即网格尺
+度$h=\frac 1 N$,则网格节点为
+$x=ih,y=jh,z=kh$
+其迭代格式为
+\begin{equation}
+	\begin{aligned}
+		\label{eq:iteration}
+		&\frac{u^{(t+\Delta t)}(ih,jh,kh) - u^{(t)}(ih,jh,kh)}{\Delta t} 
+		+\frac{1}{h^2} [ u^{(t+\Delta t)}(ih+h,jh,kh) +u^{(t+\Delta
+		t)}(ih-h,jh,kh) \\ 
+ 	&+u^{(t+\Delta t)}(ih,jh+h,kh) + u^{(t+\Delta t)}(ih,jh-h,kh)  
+	+u^{(t+\Delta t)}(ih,jh,kh+h) \\ &+u^{(t+\Delta t)}(ih,jh,kh-h) - 6
+	u^{(t+\Delta t)}(ih,jh,kh)] = f(ih,jh,kh,t+\Delta t)
+\end{aligned}
+\end{equation}
+将其写成方程组的形式：
+\begin{equation}
+    {\bf A} \bm x = \bm b,
+\end{equation}
+其中矩阵${\bf A}$是一个主对角线为$1+6\frac{\Delta t}{h^2}$，同一行还有
+6个$-\frac{\Delta t}{h^2}$的七对角矩阵，向量$\bm b$为$f\Delta
+t+u^{(t)}$。
+
+这部分数值格式的精度为$O(\Delta t+h^2)$，隐式格式对CFL条件数
+$\frac{\Delta t}{h^2}$没有要求，
+因此这部分数值格式的精度为$O(\Delta t+h^2)$。
+
+在上边界，即狄利克雷边界上，我们直接进行赋值；在下边界，即诺依曼边界
+上，我们根据$t+\Delta t$时刻该点的法向导数，采用内部点和当前点的差来逼
+近这个法向导数，得到一个关于网格密度$h$为一阶精度的数值格式，因此我么
+最终采用的数值格式的精度为$O(\Delta t+h)$。
+\section{程序分析}
+\subsection{程序说明}
+我们定义了一个类Heat,用于求解这一类型的热方程，用户可以通过在main.cpp
+文件中修改方程的初边值条件。网格密度$N$和计算终止时间
+$t_{end}$通过命令行参数读入。具体程序的结构和声明可以参见doc目录下的
+refman.pdf 和 html 目录下的index.html网页。以下我们简要说明一下并行实
+现的算法流程:
+\begin{enumerate}
+	\item 读入信息，如网格密度，计算终止时间，所用进程数目，CFL条件数
+		，和设置的初边值条件。
+	\item 由0号进程进行一些预处理工作：将三维的点用一个长度为$M$的
+		std::vector表示
+		，并给出将点转化为vector中下标的函数。并利用这个函数计算出
+		每个编号对应的点的
+		坐标和邻居的编号，并将这些信息发送给所需要的进程。
+	\item 每个进程各自的初始化工作，包括计算每个进程所包含的点的起始编
+		号和终止编号。我们这里将所有网格均等分给每个进程，第i号进程的
+		需要处理的网格编号为$\frac{iM}{size}$到$\frac{(i+1)M}{size}$。
+		此外，每个进程需要计算自己进行迭代计算时需要相邻进程提供的数据
+		。
+    \item 每个进程计算各自的矩阵${\bf A}$，并保存为~\verb|HYPRE_IJMatrix|~格
+        式。此外，我们可以在此时初始化求解器，从而节省整体运行时间。
+	\item 每个进程分别计算自己所管辖区域的$t=0$的初值情况。
+    \item 进行一步迭代计算，包括从前一步的计算结果中获取向量$\bm u^{(t)}$
+        ，计算得到向量$\bm b$，并利用HYPRE的求解方法来求解向量$\bm x$
+        。
+	\item 迭代时间达到终止时间，将解返回给用户，并进行释放内存，清除数
+        据等操作。
+\end{enumerate}
+\subsection{程序评价}
+\noindent
+这次我们采用的程序的优点有：
+\begin{itemize}
+	\item 将整个数据拉成一个一维连续的vector，并等分给各个进程，负载较
+		为均衡。
+	\item 用类进行封装，用户只需要通过主函数进行修改。
+    \item 由于每次迭代的矩阵${\bf A}$并没有变化，我们只对它进行了一次
+        计算，减少了不少计算量。同时，在迭代开始之前就对求解器进行了定
+        义，也可以节省运行时间。
+\end{itemize}
+此外，我认为此次写的程序还有如下不足：
+\begin{itemize}
+	\item 一些基本信息的初始化工作仍然由0号进程完成，这儿我认为还有改
+		进空间。
+	\item 对于边界，我们尚未给出一个精细的处理方法。目前求解方法的精度
+        为$O(\Delta t+h)$，并不能令人满意。
+\end{itemize}
+\section{数值结果}
+\subsection{误差分析}
+我们选取了一个有精确解的方程进行计算，其精确解为
+\begin{equation}
+	\label{eq:testfunction}
+	u(x,y,z,t)=\sin ((x^2+y^2+z^2)t)
+\end{equation}
+采取之前所介绍的方法进行计算，并将解与真实解做了误差比较，
+我们得到如下的结果:
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccccc}
+		\hline 
+		网格密度$N$ & L2误差 & 阶数 & CPU时间(s) & CPU时间的阶数 \\ 
+		\hline 
+		10  & 3.25e-3 & / & 0.03 & /  \\
+		\hline 
+		20 & 1.41e-3 & 1.2 & 0.23 & 2.94 \\
+		\hline 
+		40 & 6.57e-4 & 1.1 & 5.44 & 4.56 \\
+		\hline 
+		80 & 4.00e-4 & 0.7 & 181.64 & 5.06\\ 
+		\hline
+	\end{tabular}
+\end{table}
+此处我们采用的$\Delta t = 2h^2$,计算终止时间为0.1，进程数为4.
+
+受到诺依曼边界条件的影响，我们的数值精度只有1阶。
+\iffalse
+\subsection{并行效率分析}
+我们的测试函数仍然为\eqref{eq:testfunction},对不同的进程数，得到的计算
+结果如下：
+\begin{table}[H]
+	\centering
+	\begin{tabular}{ccccccccc}
+	\hline
+       进程数  & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\
+	\hline
+	  CPU时间(s)& 4.99 & 4.56 & 17.8507 & 13.5908 & 14.0187 &
+	  11.8521 & 10.2867 & 9.5289\\
+	\hline 
+	 加速比 & / & 1.91 &  2.85 & 3.74 & 3.63 & 4.29 & 4.94 &  5.34 \\
+	\hline 
+	 效率 & / & 95.7\%  & 95.0\% &  93.5\% & 72.5\% &71.5\% & 70.6\% & 
+	 66.7\% \\
+	 \hline 
+ \end{tabular}
+\end{table}
+此处我们采用的$\Delta t = 2h^2$,计算终止时间为0.1.
+\par
+通过这些数据，我们可以发现该程序的并行效率较高，但当核数多时效率会有所
+下降。经过比较，该程序最合适的进程数应设置为4.
+\fi
+\section{上机报告总结}
+此次上机作业我们学习了HYPRE软件，并利用它重新求解了第二次作业中的热方
+程。
+
+此外，我们熟悉HYPRE中行压缩的稀疏矩阵的存储和赋值方式，了解了一些常用
+的解线性方程组的求解器，对HYPRE这类数学软件的安装和使用有了一定认识。
+
+
+\end{document}
+

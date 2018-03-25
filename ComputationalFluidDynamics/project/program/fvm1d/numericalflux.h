@@ -43,6 +43,53 @@ void Force(const vartype& ul, const vartype& ur, const RealFlux& f,
   F = 1./2* (F1 + F2);
 }
 
+TEMPLATE
+void GForce(const vartype& ul, const vartype& ur, const RealFlux& f,
+      double lambda, double w, vartype& F){
+  vartype F1, F2;
+  LF(ul, ur, f, lambda, F1);
+  LW_twostep(ul, ur, f, lambda, F2);
+  F = (1-w)*F1 + w*F2;
+}
+
+TEMPLATE
+void Upwind(const vartype& ul, const vartype& ur, const RealFlux& f,
+      double lambda, vartype& F){
+  vartype fl, fr;
+  f(ul, fl);
+  f(ur, fr);
+  F = fl;
+  for (int i = 0; i < ul.size(); ++i){
+    if (fabs(ur[i]-ul[i]) > 1e-10 && (fr[i]-fl[i])/(ur[i]-ul[i]) < 0){
+      F[i] = fr[i];
+    }
+  }
+}
+
+//TEMPLATE
+//void Roe(const vartype& ul, const vartype& ur, const RealFlux& f,
+      //vartype& F){
+  //double rhoL = ul[0], rhoR = ur[0];
+  //double uL = ul[1]/ul[0], uR = ur[1]/ur[0];
+  //double pL = (gamma - 1)*(ul[2] - 0.5*uL*ul[1]);
+  //double pR = (gamma - 1)*(ur[2] - 0.5*uR*ur[1]);
+  //double HL = (ul[2] + pL)/rhoL;
+  //double HR = (ur[2] + pR)/rhoR;
+  //double rho = sqrt(rhoL*rhoR);
+  //double u = (sqrt(rhoL)*uL+sqrt(rhoR)*uR)/(sqrt(rhoL)+sqrt(rhoR));
+  //double H = (sqrt(rhoL)*HL+sqrt(rhoR)*HR)/(sqrt(rhoL)+sqrt(rhoR));
+  //double a = sqrt((gamma-1)*(H-0.5*u*u));
+  //double lambda1L = uL - sqrt(gamma*pL/rhoL);
+  //double lambda1R = uR - sqrt(gamma*pR/rhoR);
+  //double lambda1 = u - sqrt(gamma*p/rho);
+  //double lambda1bar = lambda1L*(lambda1R-lambda1)/(lambda1R-lambda1L);
+  //vartype K1;
+  //K1[0] = 1;
+  //K1[1] = u - a;
+  //K1[2] = H - u*a;
+  //F = fl + lambda1bar*alpha1*K1;
+//}
+
 TEMPLATE 
 void HLL(const vartype& ul, const vartype& ur, const RealFlux& f,
       double Sl, double Sr, vartype& F){

@@ -1,0 +1,9 @@
+\contentsline {section}{\numberline {1}问题介绍}{2}{section.1}
+\contentsline {section}{\numberline {2}算法介绍}{2}{section.2}
+\contentsline {section}{\numberline {3}程序分析}{2}{section.3}
+\contentsline {subsection}{\numberline {3.1}程序说明}{2}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}程序评价}{3}{subsection.3.2}
+\contentsline {section}{\numberline {4}数值结果}{4}{section.4}
+\contentsline {subsection}{\numberline {4.1}误差分析}{4}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}并行效率分析}{4}{subsection.4.2}
+\contentsline {section}{\numberline {5}上机报告总结}{4}{section.5}

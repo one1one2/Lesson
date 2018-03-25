@@ -1,3 +1,10 @@
+/**
+ * @file fvm1d.cpp
+ * @brief 
+ * @author  lczheng, lczheng@pku.edu.cn 
+ * 
+ * @date 2017-05-31
+ */
 #include "config.h"
 #include "fvm1d.h"
 #include "slope_limiter.h"
@@ -163,7 +170,8 @@ void This::ForwardOnestep(){
 }
 
 void This::NumericalFlux(const vartype& ul, const vartype& ur, vartype& F){
-  LF(ul, ur, realflux, dt/h, F);
+  LW(ul, ur, realflux, dt/h, F);
+  //GForce(ul, ur, realflux, dt/h, 1./(1.+CFL), F);
 //#ifdef  Euler
   //double pl = (gamma - 1)*(ul[2] - 0.5*ul[1]*ul[1]/ul[0]);
   //double pr = (gamma - 1)*(ur[2] - 0.5*ur[1]*ur[1]/ur[0]);

@@ -1,0 +1,7 @@
+#!/bin/bash 
+
+
+
+./main 10000 -1 2 0 1 0. > LF.dat && \
+./main 10000 -1 2 0 2 0. > LW.dat && \
+./main 10000 -1 2 0 3 0. > Go.dat  

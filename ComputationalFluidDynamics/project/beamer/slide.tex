@@ -170,16 +170,94 @@
 
 \begin{frame}
   \frametitle{有限体积格式}
-
+\begin{align*}
+ \pd{U}{t}&+\nabla \cdot F(U) = 0\\
+\text{在区域$\Omega$积分}\qquad   
+\pd{(\int_{\Omega}U\dd\bx)}{t} &+ \int_{\Omega} \nabla \cdot
+F(U)\dd\bx = 0\\
+\text{记$\bar{U}$为积分平均}\qquad\quad
+  |\Omega_i|\pd{\bar{U}}{t} &+ \sum_{j} \int_{S_j} F(U)\cdot \bm{n}
+   \dd S = 0\\
+\text{写成数值通量的形式}\qquad\quad
+  |\Omega_i|\pd{\bar{U}}{t} &+ \sum_{j} \hat{F}(\Omega_i,\Omega_{i,i_j})= 0 
+\end{align*}  
 \end{frame}
 
 \begin{frame}
   \frametitle{数值通量}
+  常见的数值通量有
+  \begin{itemize}
+    \item Lax-Friedrichs 通量 
+      \begin{equation*}
+        F(u_l,u_r)=\frac 12[f(u_l)+f(u_r) - \frac{h}{dt}(u_r-u_l)]
+      \end{equation*}
+    \item Lax-Wendroff 通量 
+      \begin{align*}
+        u^* &= \frac 12 [(u_l+u_r) -\frac{dt}{h}(f(u_r)-f(u_l))] \\
+        F(u_l,u_r) &=  f(u^*)
+      \end{align*}
+    \item Force 通量 
+      \begin{align*}
+      F(u_l,u_r) = \frac 12 [F^{LF}(u_l,u_r)+F^{LW}(u_l,u_r)]
+    \end{align*}
+    \item Godunov 通量 
+      \begin{align*}
+        F(u_l,u_r) = f(u^*)
+      \end{align*}
+      其中$u^*$为该方程局部Riemann问题的解。
+  \end{itemize}
+\end{frame}
+\begin{frame}
+  \begin{itemize}
+    \item HLL 通量
+      \begin{align*} 
+        F=\left\{
+        \begin{aligned}
+          &F_L,\quad & 0\leq S_L\\
+          &\frac{S_RF_R-S_LF_R+S_LS_R(U_R-U_L)}{S_R-S_L}, &
+          S_L\leq 0\leq S_R \\
+          &F_R, & 0\geq S_R.
+        \end{aligned} 
+        \right.
+      \end{align*}
+      其中$F_L=f(U_L),F_R=f(U_R)$,$S_L,S_R$为向左和向右的最大特征速度
+      。
+    \item HLLC 通量 
+      \begin{align*}
+        F=\left\{
+        \begin{aligned}
+          &F_L,\quad &0\leq S_L, \\
+          &F_{*L}     &S_L\leq 0 \leq S_*,\\
+          &S_{*R}    &S_*\leq 0\leq S_R,\\
+          &F_R, & 0\geq S_R.
+        \end{aligned}
+        \right.
+      \end{align*}
+  \end{itemize}
 \end{frame}
 
 
 \begin{frame}
   \frametitle{斜率限制器}
+  常用的斜率限制器有
+  \begin{itemize}
+    \item minmod限制器 
+      \begin{align*}
+        \phi(r) = \max\{0,\min\{r,1\}\}
+      \end{align*}
+    \item superbee限制器
+      \begin{align*}
+        \phi(r) = \max\{0,\min\{2r,1\},\min\{r,2\}\}
+      \end{align*}
+    \item MC限制器 
+      \begin{align*}
+        \phi(r) = \max\{0,\min\{2r,\frac{1+r}{2},2\}\}
+      \end{align*}
+    \item van-Leer限制器
+      \begin{align*}
+        \phi(r) = \frac{2r}{1+|r|}
+      \end{align*}
+  \end{itemize}
 \end{frame}
 
 
@@ -270,19 +348,37 @@
     \includegraphics[width=0.45\textwidth,height=0.4\textheight]{../doc/images/EulerShu-HLLC.eps}}
   \end{figure}
 \end{frame}
+%\begin{frame}
+  %\frametitle{总结}
+  %\begin{itemize}
+    %\item 
+  %\end{itemize}
+%\end{frame}
 
 \begin{frame}
   \frametitle{数值算例：前台阶问题}
-\begin{figure}[H]
-  \begin{center}
-    \includegraphics[width=0.9\textwidth]{../doc/images/ForwardStep-300-100-HLL-minmod.eps}
-  \end{center}
+  \begin{itemize}
+    \item 
+  左侧入流边界条件，右侧出流边界条件，上下与台阶处为反射边界条
+  件。
+   \item  初始值为$(\rho,u,v,p)=(1.4,3,0,1)$ 
+   \item  
+   $$h=\frac{1}{100},CFL=0.3,t=4,$$ 
+   \item 我们采用 HLL数值通量，minmod限制器。
+    \end{itemize}
+   下图为密度等值线:
+\end{frame}
+\begin{frame}
+   \begin{figure}[H]
+  \centering
+    \includegraphics[width=1.0\textwidth]{../doc/images/ForwardStep-300-100-HLL-minmod.eps}
   \caption{Osher-Shu问题}
 \end{figure}
 \end{frame}
 
 \begin{frame}
   \frametitle{数值算例：双马赫反射问题}
+  $h=\frac{1}{240},CFL=0.3,t=0.2$, HLL数值通量，minmod限制器。
 \begin{figure}[H]
   \begin{center}
     \includegraphics[width=0.9\textwidth]{../doc/images/MachReflection-960-240-MC.eps}

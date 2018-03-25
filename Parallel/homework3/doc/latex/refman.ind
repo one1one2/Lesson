@@ -1,0 +1,44 @@
+\begin{theindex}
+
+  \item {error}
+    \subitem {hw3}, \hyperpage{5}
+
+  \indexspace
+
+  \item {hw3}, \hyperpage{5}
+    \subitem {error}, \hyperpage{5}
+    \subitem {set\+\_\+f}, \hyperpage{5}
+    \subitem {set\+\_\+lambda}, \hyperpage{6}
+    \subitem {set\+\_\+N}, \hyperpage{6}
+    \subitem {set\+\_\+rank}, \hyperpage{6}
+    \subitem {set\+\_\+size}, \hyperpage{6}
+    \subitem {set\+\_\+solution}, \hyperpage{7}
+    \subitem {set\+\_\+step}, \hyperpage{7}
+    \subitem {solve}, \hyperpage{7}
+  \item {hw3.\+cpp}, \hyperpage{9}
+  \item {hw3.\+h}, \hyperpage{10}
+
+  \indexspace
+
+  \item {main.\+cpp}, \hyperpage{11}
+
+  \indexspace
+
+  \item {set\+\_\+f}
+    \subitem {hw3}, \hyperpage{5}
+  \item {set\+\_\+lambda}
+    \subitem {hw3}, \hyperpage{6}
+  \item {set\+\_\+N}
+    \subitem {hw3}, \hyperpage{6}
+  \item {set\+\_\+rank}
+    \subitem {hw3}, \hyperpage{6}
+  \item {set\+\_\+size}
+    \subitem {hw3}, \hyperpage{6}
+  \item {set\+\_\+solution}
+    \subitem {hw3}, \hyperpage{7}
+  \item {set\+\_\+step}
+    \subitem {hw3}, \hyperpage{7}
+  \item {solve}
+    \subitem {hw3}, \hyperpage{7}
+
+\end{theindex}

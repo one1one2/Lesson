@@ -40,8 +40,8 @@ public:
   size_type size(){ return len;}
   size_type size() const { return len;}
 
-  value_type& operator[](size_type index) { return val[index];} 
-  const value_type& operator[](size_type index) const { return
+  inline value_type& operator[](size_type index) { return val[index];} 
+  inline const value_type& operator[](size_type index) const { return
     val[index];}
 
   Vector<T,N>& operator+=(const Vector<T,N> & _vec){

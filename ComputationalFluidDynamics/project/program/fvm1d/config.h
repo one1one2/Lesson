@@ -18,14 +18,12 @@
 #define gamma 1.4
 #define CFL 0.6
 
-#define Euler
+//#define Euler
 
 #define Reconstruct
 
 #define RK
 
-
 #define limiter vanLeer
-
 
 #endif

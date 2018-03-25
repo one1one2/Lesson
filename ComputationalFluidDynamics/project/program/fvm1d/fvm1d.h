@@ -1,3 +1,10 @@
+/**
+ * @file fvm1d.h
+ * @brief Finite Volume Method 1D
+ * @author  lczheng, lczheng@pku.edu.cn 
+ * 
+ * @date 2017-05-31
+ */
 #ifndef __FVM_1D_H
 #define __FVM_1D_H
 
